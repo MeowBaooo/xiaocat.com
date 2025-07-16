@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>角色切換與收合功能</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    .topbar {
+      background-color: #fdecc8;
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .user-menu {
+      position: relative;
+    }
+
+    .user-icon {
+      cursor: pointer;
+      border-radius: 50%;
+      padding: 4px;
+    }
+
+    .user-icon svg {
+      width: 32px;
+      height: 32px;
+      fill: #555;
+    }
+
+    .user-dropdown {
+      position: absolute;
+      top: 40px;
+      left: 0;
+      background-color: #fff;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+      min-width: 160px;
+      z-index: 1000;
+      display: none;
+      overflow: hidden;
+    }
+
+    .menu-item {
+      padding: 12px 16px;
+      font-size: 15px;
+      color: #333;
+      cursor: pointer;
+    }
+
+    .menu-item:hover {
+      background-color: #ffe0b2;
+      color: #a00;
+      font-weight: bold;
+    }
+
+    .marquee-wrapper {
+      flex: 1;
+      overflow: hidden;
+      height: 24px;
+    }
+
+    .marquee {
+      display: inline-block;
+      white-space: nowrap;
+      color: #a94400;
+      font-weight: bold;
+      padding-left: 100%;
+      animation: scroll 10s linear infinite;
+    }
+
+    @keyframes scroll {
+      0% { transform: translateX(0%); }
+      100% { transform: translateX(-100%); }
+    }
+
+    .bell-wrapper {
+      position: relative;
+      cursor: pointer;
+    }
+
+    .bell svg {
+      width: 32px;
+      height: 32px;
+      fill: #FFA500;
+    }
+
+    .badge {
+      position: absolute;
+      top: -6px;
+      right: -6px;
+      background-color: red;
+      color: white;
+      font-size: 12px;
+      font-weight: bold;
+      padding: 2px 6px;
+      border-radius: 999px;
+      min-width: 18px;
+      text-align: center;
+    }
+
+    .notifications {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: 36px;
+      background-color: white;
+      border: 1px solid #ccc;
+      padding: 10px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+      width: 220px;
+      z-index: 999;
+      border-radius: 8px;
+    }
+
+    .main {
+      display: flex;
+      flex: 1;
+    }
+
+    .sidebar {
+      width: 220px;
+      background-color: #f5f5f5;
+      padding: 16px;
+      box-shadow: 2px 0 6px rgba(0,0,0,0.05);
+      position: relative;
+      transition: width 0.3s ease;
+    }
+
+    .sidebar.collapsed {
+      width: 40px;
+    }
+
+    .sidebar.collapsed .menu-title,
+    .sidebar.collapsed #menuList {
+      display: none;
+    }
+
+    .menu-title {
+      font-weight: bold;
+      font-size: 18px;
+      border-bottom: 2px solid #a00;
+      padding-bottom: 6px;
+      margin-bottom: 12px;
+      color: #333;
+    }
+
+    .menu-item-side {
+      margin: 10px 0;
+      padding: 8px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      color: #333;
+    }
+
+    .menu-item-side:hover {
+      background-color: #ffe0b2;
+      color: #a00;
+    }
+
+    .sidebar-toggle-button {
+      position: absolute;
+      top: 10px;
+      right: -12px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background-color: #fff;
+      border: 1px solid #ccc;
+      cursor: pointer;
+      font-size: 16px;
+      text-align: center;
+      line-height: 22px;
+      z-index: 100;
+    }
+
+    .content {
+      flex-grow: 1;
+      padding: 24px;
+      background-color: #fffdf9;
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="user-menu" id="userMenu">
+      <div class="user-icon" id="userIcon">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6H4z"/></svg>
+      </div>
+      <div class="user-dropdown" id="userDropdown"></div>
+    </div>
+    <div class="marquee-wrapper">
+      <div class="marquee">📣 7/15 前請完成資料填寫並上傳</div>
+    </div>
+    <div class="bell-wrapper" id="bell">
+      <div class="bell">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+          <path d="M12 2C10.067 2 8.5 3.567 8.5 5.5v.354A6.502 6.502 0 0 0 5 12v3.5L3.707 17.293a1 1 0 0 0 .707 1.707h15.172a1 1 0 0 0 .707-1.707L19 15.5V12a6.502 6.502 0 0 0-3.5-6.146V5.5C15.5 3.567 13.933 2 12 2zm-1 19a1 1 0 1 0 2 0h-2z"/>
+        </svg>
+        <span class="badge" id="notificationCount">2</span>
+        <div class="notifications" id="notificationBox">
+          <p>📌 7/10 上傳檔案截止</p>
+          <p>📌 7/15 提交報表</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="sidebar" id="sidebar">
+      <button id="toggleSidebar" class="sidebar-toggle-button">&lt;</button>
+      <div class="menu-title">功能列表</div>
+      <div id="menuList"><div class='menu-item-side'>請先選擇角色</div></div>
+    </div>
+    <div class="content" id="mainContent">
+      <h2>請先選擇角色以顯示功能內容。</h2>
+    </div>
+  </div>
+
+  <script>
+    const menus = {
+      "主任": ["專題進度查看", "管理員名單管理", "日曆", "設定公告", "帳號管理", "班級名單管理", "類組管理", "專題成果管理", "書面工作管理", "指導老師名單管理", "觀看專題進度報表", "申請文件管理"],
+      "管理員": ["專題進度查看", "日曆", "設定公告", "帳號管理", "班級名單管理", "類組管理", "專題成果管理", "書面工作管理", "指導老師名單管理", "觀看專題進度報表", "申請文件管理"],
+      "指導老師": ["專題進度查看", "工作項目", "日曆", "收專題組", "每日報到照片", "時間軸", "觀看報表", "成員管理", "專題成果管理", "專題成員互評查看", "設定小組長"],
+      "班導": ["專題進度查詢", "學生學習表現", "評量資料查閱", "班級報表下載"],
+      "班長": ["專題成果管理", "日曆"],
+      "學生": ["meeting紀錄登記", "題目提交", "上傳/編輯專題進度", "日曆", "成員管理", "工作事項", "登入", "工作項目封存", "時間軸", "代辦事項", "近期處理事項", "個人檔案"]
+    };
+
+    const bell = document.getElementById("bell");
+    const notificationBox = document.getElementById("notificationBox");
+    const userIcon = document.getElementById("userIcon");
+    const userDropdown = document.getElementById("userDropdown");
+    const menuList = document.getElementById("menuList");
+    const mainContent = document.getElementById("mainContent");
+    const sidebar = document.getElementById("sidebar");
+    const toggleSidebarBtn = document.getElementById("toggleSidebar");
+
+    bell.addEventListener("click", function (e) {
+      e.stopPropagation();
+      notificationBox.style.display = notificationBox.style.display === "block" ? "none" : "block";
+    });
+
+    userIcon.addEventListener("click", function (e) {
+      e.stopPropagation();
+      showUserMenu();
+      userDropdown.style.display = "block";
+    });
+
+    function showUserMenu() {
+      userDropdown.innerHTML = "";
+      const switchItem = document.createElement("div");
+      switchItem.className = "menu-item";
+      switchItem.textContent = "切換角色";
+      switchItem.onclick = showRoleList;
+      userDropdown.appendChild(switchItem);
+
+      const logoutItem = document.createElement("div");
+      logoutItem.className = "menu-item";
+      logoutItem.textContent = "登出";
+      logoutItem.onclick = () => alert("✅ 已登出！");
+      userDropdown.appendChild(logoutItem);
+    }
+
+    function showRoleList() {
+      userDropdown.innerHTML = "";
+      Object.keys(menus).forEach(role => {
+        const item = document.createElement("div");
+        item.className = "menu-item";
+        item.textContent = role;
+        item.onclick = () => selectRole(role);
+        item.onmouseenter = () => {
+          item.style.backgroundColor = "#ffe0b2";
+          item.style.color = "#a00";
+          item.style.fontWeight = "bold";
+        };
+        item.onmouseleave = () => {
+          item.style.backgroundColor = "";
+          item.style.color = "#333";
+          item.style.fontWeight = "normal";
+        };
+        userDropdown.appendChild(item);
+      });
+    }
+
+    function selectRole(role) {
+      userDropdown.style.display = "none";
+      menuList.innerHTML = '';
+      menus[role].forEach(text => {
+        const div = document.createElement("div");
+        div.className = "menu-item-side";
+        div.textContent = text;
+        menuList.appendChild(div);
+      });
+      mainContent.innerHTML = `<h2>${role} 請選擇左側功能</h2>`;
+    }
+
+    document.addEventListener("click", () => {
+      userDropdown.style.display = "none";
+      notificationBox.style.display = "none";
+    });
+
+    toggleSidebarBtn.addEventListener("click", () => {
+      const collapsed = sidebar.classList.toggle("collapsed");
+      toggleSidebarBtn.innerText = collapsed ? ">" : "<";
+    });
+
+    notificationBox.addEventListener("click", e => e.stopPropagation());
+    userDropdown.addEventListener("click", e => e.stopPropagation());
+  </script>
+</body>
+</html>
